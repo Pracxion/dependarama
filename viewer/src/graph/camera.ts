@@ -27,15 +27,31 @@ export class CanvasCamera {
 
   fit(): void {
     const { width, height } = this.svg.getBoundingClientRect();
+    if (width <= 0 || height <= 0) return;
+
     const layout = this.getLayout();
-    this.zoom = Math.max(0.02, Math.min(1.6, (width - 65) / layout.width, (height - 65) / layout.height));
-    this.panX = (width - layout.width * this.zoom) / 2;
-    this.panY = (height - layout.height * this.zoom) / 2;
+    let bounds = { x: 0, y: 0, width: layout.width, height: layout.height };
+    try {
+      const contentBounds = this.viewport.getBBox();
+      if (contentBounds.width > 0 && contentBounds.height > 0) bounds = contentBounds;
+    } catch {
+      // Keep the layout bounds when SVG content bounds are unavailable.
+    }
+
+    const padding = 32;
+    const availableWidth = Math.max(1, width - padding * 2);
+    const availableHeight = Math.max(1, height - padding * 2);
+    this.zoom = Math.max(0.005, Math.min(1.6,
+      availableWidth / bounds.width,
+      availableHeight / bounds.height,
+    ));
+    this.panX = (width - bounds.width * this.zoom) / 2 - bounds.x * this.zoom;
+    this.panY = (height - bounds.height * this.zoom) / 2 - bounds.y * this.zoom;
     this.updateTransform();
   }
 
   zoomAt(factor: number, x = this.svg.clientWidth / 2, y = this.svg.clientHeight / 2): void {
-    const next = Math.max(0.02, Math.min(4, this.zoom * factor));
+    const next = Math.max(0.005, Math.min(4, this.zoom * factor));
     this.panX = x - (x - this.panX) * next / this.zoom;
     this.panY = y - (y - this.panY) * next / this.zoom;
     this.zoom = next;

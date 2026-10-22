@@ -2,9 +2,26 @@
 # Paths in crate_root are relative to this file; starts and domain paths are
 # relative to the selected graph's crate_root.
 
+[common]
+ignored_directories = [
+  ".git",
+  ".idea",
+  ".next",
+  ".tmp-phpstan",
+  ".venv",
+  "build",
+  "dist",
+  "node_modules",
+  "target",
+  "vendor",
+  "venv",
+  "__pycache__",
+]
+
 [[graphs]]
 id = "example-project"
 name = "Example project"
+group = "Example group"
 crate_root = "."
 starts = ["src", "viewer/src"]
 

@@ -41,6 +41,7 @@ export interface ConfiguredDomain {
 export interface DependencyGraph {
   id: string;
   name: string;
+  group?: string | null;
   domains: ConfiguredDomain[];
   nodes: SourceFile[];
   edges: ImportEdge[];
@@ -52,6 +53,7 @@ export interface DependencyGraph {
 export interface GraphOption {
   id: string;
   name: string;
+  group?: string | null;
 }
 
 export interface Box {

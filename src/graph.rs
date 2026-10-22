@@ -11,6 +11,7 @@ pub struct ConfiguredDomain {
 pub struct DependencyGraph {
     pub id: String,
     pub name: String,
+    pub group: Option<String>,
     pub domains: Vec<ConfiguredDomain>,
     pub nodes: Vec<SourceFile>,
     pub edges: Vec<ImportEdge>,
@@ -87,7 +88,12 @@ pub fn render_dot(graphs: &[DependencyGraph]) -> String {
         let indent = if graphs.len() > 1 { "    " } else { "  " };
         if graphs.len() > 1 {
             output.push(format!("  subgraph cluster_graph_{graph_index} {{"));
-            output.push(format!("    label={};", quote(&graph.name)));
+            let label = graph
+                .group
+                .as_ref()
+                .map(|group| format!("{group} / {}", graph.name))
+                .unwrap_or_else(|| graph.name.clone());
+            output.push(format!("    label={};", quote(&label)));
         }
         let node_id = |id: &str| {
             if graphs.len() > 1 {

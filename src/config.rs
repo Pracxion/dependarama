@@ -12,16 +12,26 @@ pub struct Settings {
 pub struct GraphSettings {
     pub id: String,
     pub name: String,
+    pub group: Option<String>,
     pub root: PathBuf,
     pub starts: Vec<PathBuf>,
     pub domains: Vec<ConfiguredDomain>,
+    pub ignored_directories: Vec<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]
 struct Config {
+    #[serde(default)]
+    common: CommonConfig,
     graph: Option<GraphConfig>,
     #[serde(default)]
     graphs: Vec<GraphConfig>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+struct CommonConfig {
+    #[serde(default)]
+    ignored_directories: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -29,6 +39,7 @@ struct Config {
 struct GraphConfig {
     id: Option<String>,
     name: Option<String>,
+    group: Option<String>,
     #[serde(default = "default_root")]
     crate_root: String,
     #[serde(default)]
@@ -42,6 +53,7 @@ impl Default for GraphConfig {
         Self {
             id: None,
             name: None,
+            group: None,
             crate_root: default_root(),
             starts: Vec::new(),
             domains: Vec::new(),
@@ -71,6 +83,7 @@ pub fn load(config_path: Option<&Path>, root_override: Option<&Path>) -> Result<
         .map_err(|error| format!("cannot read {}: {error}", config_path.display()))?;
     let config: Config = toml::from_str(&content)
         .map_err(|error| format!("invalid config {}: {error}", config_path.display()))?;
+    let ignored_directories = normalize_ignored_directories(config.common.ignored_directories)?;
 
     let config_dir = config_path
         .parent()
@@ -115,6 +128,12 @@ pub fn load(config_path: Option<&Path>, root_override: Option<&Path>) -> Result<
         if !graph_names.insert(name.clone()) {
             return Err(format!("duplicate configured graph name: {name}"));
         }
+        let group = graph.group.take().map(|group| group.trim().to_owned());
+        if group.as_deref() == Some("") {
+            return Err(format!(
+                "configured graph group for {name} must not be empty"
+            ));
+        }
         let id = graph.id.take().unwrap_or_else(|| graph_id(&name, index));
         let id = id.trim().to_owned();
         if id.is_empty() {
@@ -129,13 +148,34 @@ pub fn load(config_path: Option<&Path>, root_override: Option<&Path>) -> Result<
         graphs.push(GraphSettings {
             id,
             name,
+            group,
             root,
             starts,
             domains,
+            ignored_directories: ignored_directories.clone(),
         });
     }
 
     Ok(Settings { graphs })
+}
+
+fn normalize_ignored_directories(directories: Vec<String>) -> Result<Vec<String>, String> {
+    let mut normalized = BTreeSet::new();
+    for directory in directories {
+        let directory = directory.trim();
+        if directory.is_empty()
+            || directory == "."
+            || directory == ".."
+            || directory.contains('/')
+            || directory.contains('\\')
+        {
+            return Err(format!(
+                "ignored directories must be directory names, not paths: {directory}"
+            ));
+        }
+        normalized.insert(directory.to_owned());
+    }
+    Ok(normalized.into_iter().collect())
 }
 
 fn normalize_starts(starts: Vec<String>, root: &Path) -> Result<Vec<PathBuf>, String> {

@@ -31,7 +31,7 @@ export async function loadProjectData(): Promise<ProjectData> {
 
   return {
     graph,
-    graphs: graphs.map(({ id, name }) => ({ id, name })),
+    graphs: graphs.map(({ id, name, group }) => ({ id, name, group })),
     files,
     domains: graph.domains,
     languages,

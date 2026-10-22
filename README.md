@@ -25,6 +25,7 @@ Each `[[graphs]]` entry defines a project. A graph can set an `id`, display `nam
 [[graphs]]
 id = "example-project"
 name = "Example project"
+group = "Example group"
 crate_root = "../path/to/project"
 starts = ["src/domain/orders", "src/domain/users"]
 
@@ -37,7 +38,7 @@ name = "users"
 path = "src/domain/users"
 ```
 
-`crate_root` is relative to the TOML file. `starts` and domain `path` values are relative to that graph's root. A start can be a source file or directory; directories are scanned recursively. Leave `starts` empty to scan the full root. Domain paths assign colors to files beneath those directories. A graph without an explicit `id` receives a slug from its name. The viewer hides graph tabs when only one graph is configured. `--root` and the positional project-root override work when the config contains exactly one graph.
+`[common].ignored_directories` lists directory names to skip at any depth in every graph, including directories explicitly selected through `starts`. `crate_root` is relative to the TOML file. `starts` and domain `path` values are relative to that graph's root. A start can be a source file or directory; directories are scanned recursively. Leave `starts` empty to scan the full root. Domain paths assign colors to files beneath those directories. The optional `group` labels related graph tabs without combining their data. A graph without an explicit `id` receives a slug from its name. The viewer hides graph tabs when only one graph is configured. `--root` and the positional project-root override work when the config contains exactly one graph.
 
 ## Viewer
 

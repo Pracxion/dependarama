@@ -5,31 +5,33 @@ use crate::graph::{
 use crate::parser::{self, ImportSpec, Language, ParsedSource};
 use crate::resolve::{Resolver, SourceUnit};
 use std::collections::{BTreeMap, BTreeSet};
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
-
-const IGNORED_DIRECTORIES: &[&str] = &[
-    ".git",
-    ".idea",
-    ".next",
-    ".venv",
-    "build",
-    "dist",
-    "node_modules",
-    "target",
-    "vendor",
-    "venv",
-    "__pycache__",
-];
 
 pub fn build(settings: GraphSettings) -> Result<DependencyGraph, String> {
     let mut paths = Vec::new();
     let mut warnings = Vec::new();
     if settings.starts.is_empty() {
-        walk(&settings.root, &settings.root, &mut paths, &mut warnings)?;
+        walk(
+            &settings.root,
+            &settings.root,
+            &settings.ignored_directories,
+            &mut paths,
+            &mut warnings,
+        )?;
     } else {
         for start in &settings.starts {
+            if has_ignored_directory(&settings.root, start, &settings.ignored_directories) {
+                continue;
+            }
             if start.is_dir() {
-                walk(&settings.root, start, &mut paths, &mut warnings)?;
+                walk(
+                    &settings.root,
+                    start,
+                    &settings.ignored_directories,
+                    &mut paths,
+                    &mut warnings,
+                )?;
             } else {
                 paths.push(start.clone());
             }
@@ -138,6 +140,7 @@ pub fn build(settings: GraphSettings) -> Result<DependencyGraph, String> {
     Ok(DependencyGraph {
         id: settings.id,
         name: settings.name,
+        group: settings.group,
         domains: settings.domains,
         nodes,
         edges,
@@ -150,6 +153,7 @@ pub fn build(settings: GraphSettings) -> Result<DependencyGraph, String> {
 fn walk(
     root: &Path,
     current: &Path,
+    ignored_directories: &[String],
     files: &mut Vec<PathBuf>,
     warnings: &mut Vec<String>,
 ) -> Result<(), String> {
@@ -178,13 +182,13 @@ fn walk(
         }
         if file_type.is_dir() {
             let name = entry.file_name();
-            if name
-                .to_str()
-                .is_some_and(|name| IGNORED_DIRECTORIES.contains(&name))
+            if ignored_directories
+                .iter()
+                .any(|ignored| name == OsStr::new(ignored))
             {
                 continue;
             }
-            walk(root, &path, files, warnings)?;
+            walk(root, &path, ignored_directories, files, warnings)?;
         } else if file_type.is_file()
             && Language::from_path_for_scan(&path).is_some()
             && path.starts_with(root)
@@ -193,6 +197,16 @@ fn walk(
         }
     }
     Ok(())
+}
+
+fn has_ignored_directory(root: &Path, path: &Path, ignored_directories: &[String]) -> bool {
+    path.strip_prefix(root).is_ok_and(|relative| {
+        relative.components().any(|component| {
+            ignored_directories
+                .iter()
+                .any(|ignored| component.as_os_str() == OsStr::new(ignored))
+        })
+    })
 }
 
 fn relative_id(root: &Path, path: &Path) -> Result<String, String> {
