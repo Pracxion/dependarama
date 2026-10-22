@@ -1,0 +1,17 @@
+# Copy this file to config.toml to customize your local graph configuration.
+# Paths in crate_root are relative to this file; starts and domain paths are
+# relative to the selected graph's crate_root.
+
+[[graphs]]
+id = "example-project"
+name = "Example project"
+crate_root = "."
+starts = ["src", "viewer/src"]
+
+[[graphs.domains]]
+name = "scanner"
+path = "src"
+
+[[graphs.domains]]
+name = "viewer"
+path = "viewer/src"

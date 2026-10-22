@@ -1,0 +1,9 @@
+/target/
+/node_modules/
+/config.toml
+/.env
+/.env.*
+!/.env.example
+.DS_Store
+/viewer/dist/
+/viewer/public/graph.json
