@@ -13,6 +13,10 @@ just dev
 
 Open **http://localhost:5178**. The dev command generates graph data before starting the viewer. If `config.toml` is absent, the CLI uses [`config.example.toml`](config.example.toml), which scans this repository. Copy the example to `config.toml` to customize your local setup; `config.toml` is ignored by Git. Run `just` to list the available commands.
 
+## Install Just
+
+On macOS with Homebrew, run `brew install just`. If Cargo is installed, you can install Just with `cargo install just`. For other platforms and package managers, see the [Just installation guide](https://just.systems/man/en/installation.html).
+
 ## Configure graphs
 
 Each `[[graphs]]` entry defines a project. A graph can set an `id`, display `name`, project root, optional scan starts, and domain color groups:
