@@ -16,12 +16,18 @@ pub fn build(settings: GraphSettings) -> Result<DependencyGraph, String> {
             &settings.root,
             &settings.root,
             &settings.ignored_directories,
+            &settings.ignored_paths,
             &mut paths,
             &mut warnings,
         )?;
     } else {
         for start in &settings.starts {
-            if has_ignored_directory(&settings.root, start, &settings.ignored_directories) {
+            if is_ignored_path(
+                &settings.root,
+                start,
+                &settings.ignored_directories,
+                &settings.ignored_paths,
+            ) {
                 continue;
             }
             if start.is_dir() {
@@ -29,6 +35,7 @@ pub fn build(settings: GraphSettings) -> Result<DependencyGraph, String> {
                     &settings.root,
                     start,
                     &settings.ignored_directories,
+                    &settings.ignored_paths,
                     &mut paths,
                     &mut warnings,
                 )?;
@@ -154,6 +161,7 @@ fn walk(
     root: &Path,
     current: &Path,
     ignored_directories: &[String],
+    ignored_paths: &[String],
     files: &mut Vec<PathBuf>,
     warnings: &mut Vec<String>,
 ) -> Result<(), String> {
@@ -181,17 +189,21 @@ fn walk(
             continue;
         }
         if file_type.is_dir() {
-            let name = entry.file_name();
-            if ignored_directories
-                .iter()
-                .any(|ignored| name == OsStr::new(ignored))
-            {
+            if is_ignored_path(root, &path, ignored_directories, ignored_paths) {
                 continue;
             }
-            walk(root, &path, ignored_directories, files, warnings)?;
+            walk(
+                root,
+                &path,
+                ignored_directories,
+                ignored_paths,
+                files,
+                warnings,
+            )?;
         } else if file_type.is_file()
             && Language::from_path_for_scan(&path).is_some()
             && path.starts_with(root)
+            && !is_ignored_path(root, &path, ignored_directories, ignored_paths)
         {
             files.push(path);
         }
@@ -199,14 +211,28 @@ fn walk(
     Ok(())
 }
 
-fn has_ignored_directory(root: &Path, path: &Path, ignored_directories: &[String]) -> bool {
-    path.strip_prefix(root).is_ok_and(|relative| {
-        relative.components().any(|component| {
-            ignored_directories
-                .iter()
-                .any(|ignored| component.as_os_str() == OsStr::new(ignored))
-        })
-    })
+fn is_ignored_path(
+    root: &Path,
+    path: &Path,
+    ignored_directories: &[String],
+    ignored_paths: &[String],
+) -> bool {
+    let Ok(relative) = path.strip_prefix(root) else {
+        return false;
+    };
+    let components = relative.components().collect::<Vec<_>>();
+    if components.iter().any(|component| {
+        ignored_directories
+            .iter()
+            .any(|ignored| component.as_os_str() == OsStr::new(ignored))
+    }) {
+        return true;
+    }
+
+    let relative = relative.to_string_lossy().replace('\\', "/");
+    ignored_paths
+        .iter()
+        .any(|ignored| relative == *ignored || relative.starts_with(&format!("{ignored}/")))
 }
 
 fn relative_id(root: &Path, path: &Path) -> Result<String, String> {

@@ -38,7 +38,7 @@ name = "users"
 path = "src/domain/users"
 ```
 
-`[common].ignored_directories` lists directory names to skip at any depth in every graph, including directories explicitly selected through `starts`. `crate_root` is relative to the TOML file. `starts` and domain `path` values are relative to that graph's root. A start can be a source file or directory; directories are scanned recursively. Leave `starts` empty to scan the full root. Domain paths assign colors to files beneath those directories. The optional `group` labels related graph tabs without combining their data. A graph without an explicit `id` receives a slug from its name. The viewer hides graph tabs when only one graph is configured. `--root` and the positional project-root override work when the config contains exactly one graph.
+`[common].ignored_directories` lists directory names to skip at any depth in every graph, including directories explicitly selected through `starts`. `[common].ignored_paths` lists relative paths to exclude from each graph root, including their contents; a graph can add its own `ignored_paths` when an exclusion is graph-specific. `crate_root` is relative to the TOML file. `starts` and domain `path` values are relative to that graph's root. A start can be a source file or directory; directories are scanned recursively. Leave `starts` empty to scan the full root. Domain paths assign colors to files beneath those directories. The optional `group` labels related graph tabs without combining their data. A graph without an explicit `id` receives a slug from its name. The viewer hides graph tabs when only one graph is configured. `--root` and the positional project-root override work when the config contains exactly one graph.
 
 ## Viewer
 

@@ -17,6 +17,7 @@ pub struct GraphSettings {
     pub starts: Vec<PathBuf>,
     pub domains: Vec<ConfiguredDomain>,
     pub ignored_directories: Vec<String>,
+    pub ignored_paths: Vec<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -32,6 +33,8 @@ struct Config {
 struct CommonConfig {
     #[serde(default)]
     ignored_directories: Vec<String>,
+    #[serde(default)]
+    ignored_paths: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -46,6 +49,8 @@ struct GraphConfig {
     starts: Vec<String>,
     #[serde(default)]
     domains: Vec<ConfiguredDomain>,
+    #[serde(default)]
+    ignored_paths: Vec<String>,
 }
 
 impl Default for GraphConfig {
@@ -57,6 +62,7 @@ impl Default for GraphConfig {
             crate_root: default_root(),
             starts: Vec::new(),
             domains: Vec::new(),
+            ignored_paths: Vec::new(),
         }
     }
 }
@@ -84,6 +90,7 @@ pub fn load(config_path: Option<&Path>, root_override: Option<&Path>) -> Result<
     let config: Config = toml::from_str(&content)
         .map_err(|error| format!("invalid config {}: {error}", config_path.display()))?;
     let ignored_directories = normalize_ignored_directories(config.common.ignored_directories)?;
+    let common_ignored_paths = normalize_ignored_paths(config.common.ignored_paths)?;
 
     let config_dir = config_path
         .parent()
@@ -145,6 +152,9 @@ pub fn load(config_path: Option<&Path>, root_override: Option<&Path>) -> Result<
 
         let starts = normalize_starts(graph.starts, &root)?;
         let domains = normalize_domains(graph.domains, &root)?;
+        let mut configured_ignored_paths = common_ignored_paths.clone();
+        configured_ignored_paths.append(&mut graph.ignored_paths);
+        let ignored_paths = normalize_ignored_paths(configured_ignored_paths)?;
         graphs.push(GraphSettings {
             id,
             name,
@@ -153,6 +163,7 @@ pub fn load(config_path: Option<&Path>, root_override: Option<&Path>) -> Result<
             starts,
             domains,
             ignored_directories: ignored_directories.clone(),
+            ignored_paths: ignored_paths.clone(),
         });
     }
 
@@ -174,6 +185,41 @@ fn normalize_ignored_directories(directories: Vec<String>) -> Result<Vec<String>
             ));
         }
         normalized.insert(directory.to_owned());
+    }
+    Ok(normalized.into_iter().collect())
+}
+
+fn normalize_ignored_paths(paths: Vec<String>) -> Result<Vec<String>, String> {
+    let mut normalized = BTreeSet::new();
+    for path in paths {
+        let path = path.trim();
+        let relative = Path::new(path);
+        if path.is_empty()
+            || relative.is_absolute()
+            || path.contains('\\')
+            || relative.components().any(|component| {
+                matches!(
+                    component,
+                    std::path::Component::ParentDir | std::path::Component::RootDir
+                )
+            })
+        {
+            return Err(format!(
+                "ignored paths must be relative to each graph root: {path}"
+            ));
+        }
+        let path = relative
+            .components()
+            .filter_map(|component| match component {
+                std::path::Component::Normal(name) => Some(name.to_string_lossy().into_owned()),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join("/");
+        if path.is_empty() {
+            return Err("ignored paths must not refer to the graph root".to_owned());
+        }
+        normalized.insert(path);
     }
     Ok(normalized.into_iter().collect())
 }

@@ -17,6 +17,7 @@ ignored_directories = [
   "venv",
   "__pycache__",
 ]
+ignored_paths = []
 
 [[graphs]]
 id = "example-project"
@@ -24,6 +25,8 @@ name = "Example project"
 group = "Example group"
 crate_root = "."
 starts = ["src", "viewer/src"]
+# Add graph-specific exclusions here when they do not apply to every graph.
+ignored_paths = []
 
 [[graphs.domains]]
 name = "scanner"
